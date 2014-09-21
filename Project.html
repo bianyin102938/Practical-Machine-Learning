@@ -203,6 +203,8 @@ hr {
 <body>
 <h1>Practical Machine Learning Project</h1>
 
+<p>The html version is available at <a href="http://ruishu.github.io/Practical_Machine_Learning">Practical Machine Learning</a></p>
+
 <h2>Purpose</h2>
 
 <p>Given <a href="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv">accelerometer data</a> from various types of physical activities<sup>1,</sup> we wish to predict the type of activity performed. </p>
@@ -250,7 +252,7 @@ for(name in names(data)[-1]){                            # the first column (ind
 
 <h2>Cross-validation Partition</h2>
 
-<p>The training data was then partitioned to enable cross-validation. Due to the extensive runtime of random forest algorithm in large data sets (when using the default caret package settings), a smaller training set was chosen, side-stepping the convention of the 60% training/40% testing split. </p>
+<p>The training data was then partitioned to enable cross-validation. Due to the extensive runtime of random forest algorithm in large data sets (when using the default caret package settings), a smaller training set was chosen, side-stepping the convention of the 60% training/40% testing split. Since the test set is significantly larger than the training set, our calculations will be biased toward overestimating the error.</p>
 
 <pre><code class="r">## Cross-validation Partitioning
 inTrain &lt;- createDataPartition(y=clean_data$classe,
@@ -276,22 +278,106 @@ if(any(nsv$zeroVar)){                                    # remove zero variance 
 
 <h2>Model Creation</h2>
 
-<p>Random forest method was used to construct the model.</p>
+<p>Random forest method was used to construct the model. The motivations for using random forest were as follows:</p>
+
+<ol>
+<li>It can handle large numbers of covariates without much initial selection.</li>
+<li>It is robust against input type and usually does not require preprocessing steps such as normalization.</li>
+<li>It offers a means of determining variable importance (if necessary).</li>
+<li>It is often very accurate.</li>
+</ol>
+
+<p>These features make random forest ideal for initial exploration of our data, which does have a large number of starting covariates. </p>
 
 <pre><code class="r">## Model creation
 modFit &lt;- train(classe ~ ., method=&quot;rf&quot;, data=training)  # rf model
 print(modFit)                                            # print fitness of model
 </code></pre>
 
+<pre><code class="r">Loading required package: randomForest
+randomForest 4.6-10
+Type rfNews() to see new features/changes/bug fixes.
+Loading required namespace: e1071
+Random Forest 
+
+3927 samples
+  58 predictors
+   5 classes: &#39;A&#39;, &#39;B&#39;, &#39;C&#39;, &#39;D&#39;, &#39;E&#39; 
+
+No pre-processing
+Resampling: Bootstrapped (25 reps) 
+
+Summary of sample sizes: 3927, 3927, 3927, 3927, 3927, 3927, ... 
+
+Resampling results across tuning parameters:
+
+  mtry  Accuracy  Kappa  Accuracy SD  Kappa SD
+   2    0.967     0.958  0.00403      0.00509 
+  41    0.990     0.987  0.00368      0.00465 
+  80    0.987     0.984  0.00522      0.00660 
+
+Accuracy was used to select the optimal model using  the largest value.
+The final value used for the model was mtry = 41. 
+</code></pre>
+
 <h2>Cross-validation/Out-of-Sample Error</h2>
 
-<p>Cross-validation was performed using the previously partitioned testing data. Out-of-sample error is estimated to be ?????????????</p>
+<p>Cross-validation was performed using the previously partitioned testing data. Out-of-sample error is estimated to be 1-0.995 = 0.005. Recall that our out-of-sample error was biased toward over-estimating the error (given the large test-to-training ratio), meaning that an unbiased estimate of the out-of-sample error would likely be smaller than the computed error of 0.005, making the error rate quite respectable.</p>
 
 <pre><code class="r">## Cross Validation/Out-of-Sample Error
 pred &lt;- predict(modFit, newdata=testing)      # run prediction on previously partitioned testing data
 ## Compute out-of-sample error
 print(confusionMatrix(pred, testing$classe))  # visualize via confusion matrix
 </code></pre>
+
+<pre><code class="r">Confusion Matrix and Statistics
+
+          Reference
+Prediction    A    B    C    D    E
+         A 4463   21    0    0    0
+         B    1 3006    5    0    0
+         C    0   10 2719   17    0
+         D    0    0   13 2550    6
+         E    0    0    0    5 2879
+
+Overall Statistics
+
+               Accuracy : 0.995           
+                 95% CI : (0.9938, 0.9961)
+    No Information Rate : 0.2844          
+    P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+
+                  Kappa : 0.9937          
+ Mcnemar&#39;s Test P-Value : NA              
+
+Statistics by Class:
+
+                     Class: A Class: B Class: C Class: D Class: E
+Sensitivity            0.9998   0.9898   0.9934   0.9914   0.9979
+Specificity            0.9981   0.9995   0.9979   0.9986   0.9996
+Pos Pred Value         0.9953   0.9980   0.9902   0.9926   0.9983
+Neg Pred Value         0.9999   0.9976   0.9986   0.9983   0.9995
+Prevalence             0.2844   0.1935   0.1744   0.1639   0.1838
+Detection Rate         0.2844   0.1915   0.1732   0.1625   0.1834
+Detection Prevalence   0.2857   0.1919   0.1750   0.1637   0.1838
+Balanced Accuracy      0.9990   0.9947   0.9957   0.9950   0.9988
+</code></pre>
+
+<h2>Predictions</h2>
+
+<p>After cleaning the <a href="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv">test data</a> in the same manner as the training data (described above), predictions were made based on the training model:</p>
+
+<pre><code class="r">## Predictions for test_data
+pred &lt;- predict(modFit, newdata=test_data)    # actual predictions 
+</code></pre>
+
+<p>The predictions were made:</p>
+
+<blockquote>
+<p>predictions = B A B A A E D B A A B C B A E E A B B B</p>
+</blockquote>
+
+<p>All predictions turned out to be correct.</p>
 
 <p><sup>1</sup> Ugulino, W.; Cardador, D.; Vega, K.; Velloso, E.; Milidiu, R.; Fuks, H. Wearable Computing: Accelerometers&#39; Data Classification of Body Postures and Movements. Proceedings of 21st Brazilian Symposium on Artificial Intelligence. Advances in Artificial Intelligence - SBIA 2012. In: Lecture Notes in Computer Science. , pp. 52-61. Curitiba, PR: Springer Berlin / Heidelberg, 2012. ISBN 978-3-642-34458-9. DOI: 10.1007/978-3-642-34459-6_6. </p>
 
