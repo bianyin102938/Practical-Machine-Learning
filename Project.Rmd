@@ -1,0 +1,98 @@
+# Practical Machine Learning Project
+
+## Purpose
+
+Given [accelerometer data](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv) from various types of physical activities^1, we wish to predict the type of activity performed. 
+
+The specifics of the project are detailed below:
+> Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+## Libraries
+The following library is necessary
+
+```{r eval=FALSE, libraries}
+library(caret)      
+
+```
+
+## Data Acquisition and Cleaning
+
+A directory was created, and the training data was acquired. 
+
+```{r eval=FALSE, data_acquisition}
+## Data acquisition
+if(!file.exists("data")) dir.create("data")              # create a folder for data
+
+if(!file.exists("data/train.csv")){
+    download.file(
+        "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv",
+        destfile="./data/train.csv", method="curl")      # download training data
+}
+
+data = read.csv("data/train.csv", header=TRUE)           # load the training data
+```
+
+The data was then cleaned to remove any column containing empty entries or NA:
+
+```{r eval=FALSE, data_cleaning}
+clean_data = data.frame(matrix(1, nrow = nrow(data), ncol = 0)) 
+
+## Data cleaning
+for(name in names(data)[-1]){                            # the first column (indices) was removed
+    if (any(is.na(data[, name]))) next                   # all columns containing NA removed
+    if (any(data[, name] == "" )) next                   # all columns containing empty entries removed
+    clean_data[, name] = data[, name]                    # all remaining columns added to clean_data 
+}
+```
+
+## Cross-validation Partition
+
+The training data was then partitioned to enable cross-validation. Due to the extensive runtime of random forest algorithm in large data sets (when using the default caret package settings), a smaller training set was chosen, side-stepping the convention of the 60% training/40% testing split. 
+
+```{r eval=FALSE, partitioning}
+## Cross-validation Partitioning
+inTrain <- createDataPartition(y=clean_data$classe,
+                               p=0.2, list=FALSE)
+training <- clean_data[inTrain,]                         # partition the training data into
+testing <- clean_data[-inTrain,]                         # training and testing data for cross-validation
+```
+
+## Zero Variance Columns
+
+Any columns exhibiting zero variance would now be removed. In this particular case, all columns exhibited
+nonzero variance.
+
+```{r eval=FALSE, zeroVar_evaluation}
+nsv <- nearZeroVar(training,saveMetrics=TRUE)            # check for zero variance
+if(any(nsv$zeroVar)){                                    # remove zero variance columns if exist
+    print("At least one covariate as zero variance. Commencing removal.")
+    training <- training[!nsv$zeroVar,]
+    testing <- testing[!nsv$zeroVar,]
+}else{
+    print("All selected columns have nonzero variance.")
+}
+```
+
+## Model Creation
+
+Random forest method was used to construct the model.
+
+```{r eval=FALSE, model_creation}
+## Model creation
+modFit <- train(classe ~ ., method="rf", data=training)  # rf model
+print(modFit)                                            # print fitness of model
+```
+
+## Cross-validation/Out-of-Sample Error
+
+Cross-validation was performed using the previously partitioned testing data. Out-of-sample error is estimated to be ?????????????
+
+```{r eval=FALSE, cross_validation}
+## Cross Validation/Out-of-Sample Error
+pred <- predict(modFit, newdata=testing)      # run prediction on previously partitioned testing data
+## Compute out-of-sample error
+print(confusionMatrix(pred, testing$classe))  # visualize via confusion matrix
+```
+
+
+^1 Ugulino, W.; Cardador, D.; Vega, K.; Velloso, E.; Milidiu, R.; Fuks, H. Wearable Computing: Accelerometers' Data Classification of Body Postures and Movements. Proceedings of 21st Brazilian Symposium on Artificial Intelligence. Advances in Artificial Intelligence - SBIA 2012. In: Lecture Notes in Computer Science. , pp. 52-61. Curitiba, PR: Springer Berlin / Heidelberg, 2012. ISBN 978-3-642-34458-9. DOI: 10.1007/978-3-642-34459-6_6. 
