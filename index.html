@@ -252,11 +252,11 @@ for(name in names(data)[-1]){                            # the first column (ind
 
 <h2>Cross-validation Partition</h2>
 
-<p>The training data was then partitioned to enable cross-validation. Due to the extensive runtime of random forest algorithm in large data sets (when using the default caret package settings), a smaller training set was chosen, side-stepping the convention of the 60% training/40% testing split. </p>
+<p>The training data was then partitioned to enable cross-validation. Due to the extensive runtime of random forest algorithm in large data sets (when using the default caret package settings), a smaller training set was chosen, side-stepping the convention of the 60% training/40% testing split. Since the test set is significantly larger than the training set, our calculations will be biased toward overestimating the error.</p>
 
 <pre><code class="r">## Cross-validation Partitioning
 inTrain &lt;- createDataPartition(y=clean_data$classe,
-                               p=0.01, list=FALSE)
+                               p=0.2, list=FALSE)
 training &lt;- clean_data[inTrain,]                         # partition the training data into
 testing &lt;- clean_data[-inTrain,]                         # training and testing data for cross-validation
 </code></pre>
@@ -278,7 +278,16 @@ if(any(nsv$zeroVar)){                                    # remove zero variance 
 
 <h2>Model Creation</h2>
 
-<p>Random forest method was used to construct the model.</p>
+<p>Random forest method was used to construct the model. The motivations for using random forest were as follows:</p>
+
+<ol>
+<li>It can handle large numbers of covariates without much initial selection.</li>
+<li>It is robust against input type and usually does not require preprocessing steps such as normalization.</li>
+<li>It offers a means of determining variable importance (if necessary).</li>
+<li>It is often very accurate.</li>
+</ol>
+
+<p>These features make random forest ideal for initial exploration of our data, which does have a large number of starting covariates. </p>
 
 <pre><code class="r">## Model creation
 modFit &lt;- train(classe ~ ., method=&quot;rf&quot;, data=training)  # rf model
@@ -313,7 +322,7 @@ The final value used for the model was mtry = 41.
 
 <h2>Cross-validation/Out-of-Sample Error</h2>
 
-<p>Cross-validation was performed using the previously partitioned testing data. Out-of-sample error is estimated to be 1-0.995 = 0.005, a respectable value.</p>
+<p>Cross-validation was performed using the previously partitioned testing data. Out-of-sample error is estimated to be 1-0.995 = 0.005. Recall that our out-of-sample error was biased toward over-estimating the error (given the large test-to-training ratio), meaning that an unbiased estimate of the out-of-sample error would likely be smaller than the computed error of 0.005, making the error rate quite respectable.</p>
 
 <pre><code class="r">## Cross Validation/Out-of-Sample Error
 pred &lt;- predict(modFit, newdata=testing)      # run prediction on previously partitioned testing data
